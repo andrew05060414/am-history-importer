@@ -105,27 +105,43 @@ function parseEnvFile(text: string): Record<string, string> {
 }
 
 export function readSharedAgentMemoryEnv(): {
+  /** URL the importer should use (LOCAL preferred when set). */
   baseUrl: string;
+  /** Daily hooks/MCP URL (Tailscale), if set. */
+  primaryUrl: string;
+  /** LAN URL for bulk import only, if set. */
+  localUrl: string;
   secret: string;
   fromFileUrl: string;
   fromProcessUrl: string;
+  usingLocal: boolean;
 } {
   const envPath = join(home, ".agentmemory", ".env");
   const fromFile = existsSync(envPath)
     ? parseEnvFile(readFileSync(envPath, "utf8"))
     : {};
-  const fromFileUrl = fromFile.AGENTMEMORY_URL || "";
-  const fromProcessUrl = process.env.AGENTMEMORY_URL || "";
-  // Prefer ~/.agentmemory/.env over process.env: Cursor/MCP often injects
-  // Tailscale into the shell env and would otherwise ignore the user's LAN edit.
+
+  const localUrl =
+    process.env.AGENTMEMORY_URL_LOCAL ||
+    fromFile.AGENTMEMORY_URL_LOCAL ||
+    "";
+  // File wins over process for primary URL (MCP often injects Tailscale).
+  const primaryFromFile = fromFile.AGENTMEMORY_URL || "";
+  const primaryFromProcess = process.env.AGENTMEMORY_URL || "";
+  const primaryUrl = primaryFromFile || primaryFromProcess || "";
+
+  const usingLocal = Boolean(localUrl);
   return {
-    baseUrl: fromFileUrl || fromProcessUrl || "",
+    baseUrl: localUrl || primaryUrl || "",
+    primaryUrl,
+    localUrl,
     secret:
       fromFile.AGENTMEMORY_SECRET ||
       process.env.AGENTMEMORY_SECRET ||
       "",
-    fromFileUrl,
-    fromProcessUrl,
+    fromFileUrl: primaryFromFile,
+    fromProcessUrl: primaryFromProcess,
+    usingLocal,
   };
 }
 
@@ -147,6 +163,7 @@ export function buildDefaultConfig(
     baseUrl: string;
     secret: string;
     checkpointDbPath: string;
+    timeoutMs: number;
   }>,
 ): ImporterConfig {
   const shared = readSharedAgentMemoryEnv();
@@ -156,7 +173,8 @@ export function buildDefaultConfig(
     agentMemory: {
       baseUrl: overrides?.baseUrl || shared.baseUrl || "http://localhost:3111",
       secret: overrides?.secret || shared.secret,
-      timeoutMs: 120_000,
+      // Per-request HTTP timeout. Huge sessions = many requests; slow NAS needs headroom.
+      timeoutMs: overrides?.timeoutMs ?? 180_000,
     },
     sources: {
       codex: {
@@ -185,8 +203,9 @@ export function loadConfig(configPath?: string): ImporterConfig {
   const mergeRoots = (configured: string[] | undefined, fallback: string[]) =>
     unique([...(configured || []), ...fallback]);
 
-  // Priority: process.env / ~/.agentmemory/.env  >  config.json  >  defaults
-  // (skill bootstrap often writes Tailscale into config.json and would otherwise win)
+  // Importer URL priority:
+  //   AGENTMEMORY_URL_LOCAL (.env)  >  AGENTMEMORY_URL (.env)  >  config.json  >  default
+  // Daily hooks keep using AGENTMEMORY_URL (Tailscale); import can use LOCAL (LAN).
   return {
     machineId: raw.machineId || defaults.machineId,
     checkpointDbPath: expandHome(

@@ -62,18 +62,15 @@ Session IDs in Agent Memory are namespaced: `import-codex-<uuid>`, `import-curso
 
 ## Speed
 
-Bottleneck is usually **HTTP to Agent Memory**, not CPU. Prefer LAN:
+Bottleneck is usually **HTTP to Agent Memory** (one request per observation), not CPU.
+
+- Keep `AGENTMEMORY_URL` on Tailscale for daily hooks.
+- Set `AGENTMEMORY_URL_LOCAL` to LAN for this importer only.
+- Default per-request timeout is **180s** (`--timeout-ms` to override).
+- Parallel session writers (default 8): `--concurrency 4` if NAS is overloaded.
 
 ```bash
-# ~/.agentmemory/.env — at home use LAN, away use Tailscale
-AGENTMEMORY_URL=http://192.168.0.102:3111
+node dist/cli.js sync --concurrency 4 --timeout-ms 180000
 ```
 
-Parallel session writers (default 8):
-
-```bash
-node dist/cli.js sync --concurrency 8
-node dist/cli.js sync --concurrency 16   # if NAS still comfortable
-```
-
-This talks **HTTP REST**, not SSH. Plain `http://` is already unencrypted; SSH would add encryption overhead, not remove it.
+Plain `http://` is already unencrypted; SSH is not used.

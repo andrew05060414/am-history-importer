@@ -16,24 +16,33 @@ interface CliArgs {
   inputPath: string;
   dryRun: boolean;
   concurrency: number;
+  timeoutMs: number;
   help: boolean;
 }
 
 function warnUrlSource(baseUrl: string): void {
-  console.log(`agentmemory: ${baseUrl}`);
+  const shared = readSharedAgentMemoryEnv();
+  if (shared.usingLocal) {
+    console.log(`agentmemory: ${baseUrl} (AGENTMEMORY_URL_LOCAL / LAN)`);
+    if (shared.primaryUrl) {
+      console.log(`hooks/MCP stay on: ${shared.primaryUrl}`);
+    }
+  } else {
+    console.log(`agentmemory: ${baseUrl}`);
+  }
   if (looksLikeTailscaleUrl(baseUrl)) {
     console.warn(
-      "warning: URL looks like Tailscale (100.x). At home edit ~/.agentmemory/.env to http://192.168.0.102:3111 (file overrides shell/MCP env and config.json).",
+      "warning: import URL is Tailscale (100.x). For faster bulk sync set AGENTMEMORY_URL_LOCAL=http://192.168.0.102:3111 in ~/.agentmemory/.env (keeps AGENTMEMORY_URL for daily use).",
     );
   }
-  const shared = readSharedAgentMemoryEnv();
   if (
     shared.fromFileUrl &&
     shared.fromProcessUrl &&
-    shared.fromFileUrl !== shared.fromProcessUrl
+    shared.fromFileUrl !== shared.fromProcessUrl &&
+    !shared.usingLocal
   ) {
     console.warn(
-      `note: shell AGENTMEMORY_URL=${shared.fromProcessUrl} ignored; using ~/.agentmemory/.env=${shared.fromFileUrl}`,
+      `note: shell AGENTMEMORY_URL=${shared.fromProcessUrl}; file has ${shared.fromFileUrl}`,
     );
   }
 }
@@ -53,13 +62,17 @@ Options:
   --limit N            Max sessions to process
   --input PATH         Zip / rollout dir / cursaves snapshot / state.vscdb
   --concurrency N      Parallel sessions while writing (default: 8)
+  --timeout-ms N       Per-request HTTP timeout (default: 180000)
   --dry-run            Parse and checkpoint-check without writing to Agent Memory
 
 Env:
-  AGENTMEMORY_URL / AGENTMEMORY_SECRET  (or ~/.agentmemory/.env)
+  AGENTMEMORY_URL         Daily hooks/MCP (e.g. Tailscale)
+  AGENTMEMORY_URL_LOCAL   Optional LAN URL used only by this importer
+  AGENTMEMORY_SECRET      Bearer secret (or ~/.agentmemory/.env)
 
 Speed tip (LAN):
-  Prefer http://192.168.0.102:3111 over Tailscale 100.x when at home.
+  Keep AGENTMEMORY_URL on Tailscale for daily hooks/MCP.
+  Set AGENTMEMORY_URL_LOCAL=http://192.168.0.102:3111 for this importer only.
   This tool speaks HTTP REST to Agent Memory — not SSH.
 `);
 }
@@ -74,6 +87,7 @@ function parseArgs(argv: string[]): CliArgs {
     inputPath: "",
     dryRun: false,
     concurrency: 8,
+    timeoutMs: 0,
     help: false,
   };
 
@@ -93,6 +107,10 @@ function parseArgs(argv: string[]): CliArgs {
       result.concurrency = Number.parseInt(argv[++i] || "8", 10) || 8;
     } else if (arg?.startsWith("--concurrency=")) {
       result.concurrency = Number.parseInt(arg.slice(14), 10) || 8;
+    } else if (arg === "--timeout-ms") {
+      result.timeoutMs = Number.parseInt(argv[++i] || "0", 10) || 0;
+    } else if (arg?.startsWith("--timeout-ms=")) {
+      result.timeoutMs = Number.parseInt(arg.slice(13), 10) || 0;
     } else if (arg === "--input") result.inputPath = argv[++i] || "";
     else if (arg?.startsWith("--input=")) result.inputPath = arg.slice(8);
     else if (!arg.startsWith("-") && !result.inputPath) result.inputPath = arg;
@@ -132,6 +150,9 @@ async function main(): Promise<void> {
     args.configPath || defaultConfigPath(),
   );
   const config = loadConfig(configPath);
+  if (args.timeoutMs > 0) {
+    config.agentMemory.timeoutMs = args.timeoutMs;
+  }
   const sources = parseSources(args.source);
   const runOpts = {
     sources,
