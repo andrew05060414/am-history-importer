@@ -11,6 +11,10 @@ import {
   loadAllCodexSessions,
 } from "./sources/codex.js";
 import {
+  discoverClaude,
+  loadAllClaudeSessions,
+} from "./sources/claude.js";
+import {
   discoverCursor,
   loadAllCursorSessions,
 } from "./sources/cursor.js";
@@ -52,7 +56,7 @@ function selectedSources(
 ): SourceName[] {
   const wanted = sources?.length
     ? sources
-    : (["codex", "cursor"] as SourceName[]);
+    : (["codex", "cursor", "claude"] as SourceName[]);
   return wanted.filter((s) => config.sources[s]?.enabled);
 }
 
@@ -96,6 +100,16 @@ async function collectSessions(
       console.log(`scanning cursor…${opts.limit ? ` (limit ${opts.limit})` : ""}`);
       push(
         await loadAllCursorSessions(config.sources.cursor.roots, {
+          inputPath: opts.inputPath,
+          limit: opts.limit,
+        }),
+      );
+    } else if (source === "claude") {
+      if (opts.inputPath && isCursorInput(opts.inputPath)) continue;
+      if (opts.inputPath?.toLowerCase().endsWith(".zip")) continue;
+      console.log(`scanning claude…${opts.limit ? ` (limit ${opts.limit})` : ""}`);
+      push(
+        await loadAllClaudeSessions(config.sources.claude.roots, {
           inputPath: opts.inputPath,
           limit: opts.limit,
         }),
@@ -158,6 +172,18 @@ export async function runDiscover(
       );
       items.push(
         ...(await discoverCursor(config.sources.cursor.roots, {
+          inputPath: opts.inputPath,
+          limit: perSourceLimit,
+        })),
+      );
+    } else if (source === "claude") {
+      if (opts.inputPath && isCursorInput(opts.inputPath)) continue;
+      if (opts.inputPath?.toLowerCase().endsWith(".zip")) continue;
+      console.log(
+        `scanning claude…${perSourceLimit ? ` (limit ${perSourceLimit})` : ""}`,
+      );
+      items.push(
+        ...(await discoverClaude(config.sources.claude.roots, {
           inputPath: opts.inputPath,
           limit: perSourceLimit,
         })),
@@ -285,6 +311,7 @@ export function runStatus(config: ImporterConfig): {
   const bySource = {
     codex: checkpoint.count("codex"),
     cursor: checkpoint.count("cursor"),
+    claude: checkpoint.count("claude"),
   };
   const total = checkpoint.count();
   checkpoint.close();

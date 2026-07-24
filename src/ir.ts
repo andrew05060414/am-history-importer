@@ -1,4 +1,4 @@
-export type ImportSource = "codex" | "cursor";
+export type ImportSource = "codex" | "cursor" | "claude";
 
 export type ImportObservationType =
   | "conversation"

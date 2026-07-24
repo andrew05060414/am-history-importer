@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, hostname, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-export type SourceName = "codex" | "cursor";
+export type SourceName = "codex" | "cursor" | "claude";
 
 export interface SourceConfig {
   enabled: boolean;
@@ -22,6 +22,7 @@ export interface ImporterConfig {
   sources: {
     codex: SourceConfig;
     cursor: SourceConfig;
+    claude: SourceConfig;
   };
 }
 
@@ -57,6 +58,10 @@ export function defaultCodexRoots(): string[] {
     );
   }
   return unique(roots);
+}
+
+export function defaultClaudeRoots(): string[] {
+  return unique([join(home, ".claude", "projects")]);
 }
 
 export function defaultCursorRoots(): string[] {
@@ -186,6 +191,10 @@ export function buildDefaultConfig(
         enabled: true,
         roots: defaultCursorRoots(),
       },
+      claude: {
+        enabled: true,
+        roots: defaultClaudeRoots(),
+      },
     },
   };
 }
@@ -237,6 +246,13 @@ export function loadConfig(configPath?: string): ImporterConfig {
         roots: mergeRoots(
           raw.sources?.cursor?.roots,
           defaults.sources.cursor.roots,
+        ),
+      },
+      claude: {
+        enabled: raw.sources?.claude?.enabled ?? true,
+        roots: mergeRoots(
+          raw.sources?.claude?.roots,
+          defaults.sources.claude.roots,
         ),
       },
     },
