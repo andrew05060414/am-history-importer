@@ -15,10 +15,15 @@ Requires Node.js 22+.
 
 ## Configure
 
-Uses `~/.agentmemory/.env` when present (**this file wins** over shell/`config.json`, because Cursor/MCP often inject Tailscale into `AGENTMEMORY_URL`):
+Uses `~/.agentmemory/.env`:
 
 ```
-AGENTMEMORY_URL=http://192.168.0.102:3111
+# Daily hooks / MCP — Tailscale
+AGENTMEMORY_URL=http://100.73.230.28:3111
+
+# Bulk import only — LAN (this importer prefers LOCAL when set)
+AGENTMEMORY_URL_LOCAL=http://192.168.0.102:3111
+
 AGENTMEMORY_SECRET=...
 ```
 
