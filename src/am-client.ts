@@ -12,7 +12,7 @@ export interface AmClientOptions {
 function isRetryable(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
-  return (
+  if (
     err.name === "TimeoutError" ||
     err.name === "AbortError" ||
     msg.includes("timeout") ||
@@ -21,7 +21,11 @@ function isRetryable(err: unknown): boolean {
     msg.includes("econnreset") ||
     msg.includes("econnrefused") ||
     msg.includes("socket")
-  );
+  ) {
+    return true;
+  }
+  // NAS/nginx gateway overload — retry the same observe.
+  return /→\s*(429|502|503|504)\b/.test(msg);
 }
 
 function sleep(ms: number): Promise<void> {
