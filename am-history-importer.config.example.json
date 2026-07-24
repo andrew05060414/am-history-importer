@@ -1,0 +1,26 @@
+{
+  "machineId": "example-machine",
+  "checkpointDbPath": "~/.agentmemory/history-importer/checkpoint.db",
+  "agentMemory": {
+    "baseUrl": "http://192.168.0.102:3111",
+    "secret": "",
+    "timeoutMs": 30000
+  },
+  "sources": {
+    "codex": {
+      "enabled": true,
+      "roots": [
+        "~/.codex/sessions",
+        "~/.codex/archived_sessions"
+      ],
+      "skipSubagent": true
+    },
+    "cursor": {
+      "enabled": true,
+      "roots": [
+        "~/.cursaves/snapshots",
+        "~/AppData/Roaming/Cursor/User/globalStorage"
+      ]
+    }
+  }
+}
