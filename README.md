@@ -71,11 +71,13 @@ Bottleneck is usually **HTTP to Agent Memory** (one request per observation), no
 
 - Keep `AGENTMEMORY_URL` on Tailscale for daily hooks.
 - Set `AGENTMEMORY_URL_LOCAL` to LAN for this importer only.
-- Default per-request timeout is **180s** (`--timeout-ms` to override).
+- Default per-request timeout is **0 = wait until done** (no abort). Optional hard cap: `--timeout-ms 180000`.
+- Failed HTTP calls retry up to 3 times (timeout/network).
 - Parallel session writers (default 8): `--concurrency 4` if NAS is overloaded.
 
 ```bash
-node dist/cli.js sync --concurrency 4 --timeout-ms 180000
+node dist/cli.js sync --concurrency 4
+node dist/cli.js sync --timeout-ms 180000   # only if you want a hard per-request cap
 ```
 
 Plain `http://` is already unencrypted; SSH is not used.

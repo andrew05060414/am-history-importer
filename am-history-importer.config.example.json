@@ -4,7 +4,7 @@
   "agentMemory": {
     "baseUrl": "http://100.73.230.28:3111",
     "secret": "",
-    "timeoutMs": 180000
+    "timeoutMs": 0
   },
   "sources": {
     "codex": {
@@ -24,3 +24,4 @@
     }
   }
 }
+

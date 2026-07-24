@@ -222,8 +222,9 @@ export async function runSync(
 
   const concurrency = Math.max(1, opts.concurrency ?? 8);
   if (toWrite.length > 0) {
+    const t = config.agentMemory.timeoutMs;
     console.log(
-      `writing ${toWrite.length} session(s) to ${config.agentMemory.baseUrl} (concurrency=${concurrency})`,
+      `writing ${toWrite.length} session(s) to ${config.agentMemory.baseUrl} (concurrency=${concurrency}, timeout=${t <= 0 ? "until done" : `${t}ms`})`,
     );
   }
 

@@ -62,7 +62,7 @@ Options:
   --limit N            Max sessions to process
   --input PATH         Zip / rollout dir / cursaves snapshot / state.vscdb
   --concurrency N      Parallel sessions while writing (default: 8)
-  --timeout-ms N       Per-request HTTP timeout (default: 180000)
+  --timeout-ms N       Per-request HTTP timeout; 0 = wait until done (default)
   --dry-run            Parse and checkpoint-check without writing to Agent Memory
 
 Env:
@@ -73,7 +73,7 @@ Env:
 Speed tip (LAN):
   Keep AGENTMEMORY_URL on Tailscale for daily hooks/MCP.
   Set AGENTMEMORY_URL_LOCAL=http://192.168.0.102:3111 for this importer only.
-  This tool speaks HTTP REST to Agent Memory — not SSH.
+  Default timeout is 0 (wait until each request finishes). Use --timeout-ms 180000 only if you want a hard cap.
 `);
 }
 

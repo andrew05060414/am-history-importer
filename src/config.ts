@@ -173,8 +173,8 @@ export function buildDefaultConfig(
     agentMemory: {
       baseUrl: overrides?.baseUrl || shared.baseUrl || "http://localhost:3111",
       secret: overrides?.secret || shared.secret,
-      // Per-request HTTP timeout. Huge sessions = many requests; slow NAS needs headroom.
-      timeoutMs: overrides?.timeoutMs ?? 180_000,
+      // 0 = wait until each HTTP call finishes (no AbortSignal). Prefer this for bulk import.
+      timeoutMs: overrides?.timeoutMs ?? 0,
     },
     sources: {
       codex: {
