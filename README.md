@@ -4,6 +4,8 @@ One-shot import of **Codex** and **Cursor** chat history into a remote [Agent Me
 
 Claude Code is out of scope here (use official `import-jsonl`).
 
+**用户手册（中文）：** [docs/使用手册.md](docs/使用手册.md)
+
 ## Install
 
 ```bash
@@ -29,31 +31,18 @@ AGENTMEMORY_SECRET=...
 
 First run writes `~/.agentmemory/history-importer/config.json` (see `am-history-importer.config.example.json`).
 
-## Usage
+## Quick start
 
 ```bash
-# List sessions found on this machine
-node dist/cli.js discover
-
-# Import everything (Codex + Cursor), skip already-synced
-node dist/cli.js sync
-
-# Codex only, first 20
-node dist/cli.js sync --source codex --limit 20
-
-# Cursor snapshots / DB
-node dist/cli.js sync --source cursor --limit 5
-
-# Explicit inputs
-node dist/cli.js sync --input path/to/codex-session-export.zip
-node dist/cli.js sync --input ~/.cursaves/snapshots
-node dist/cli.js sync --input ~/AppData/Roaming/Cursor/User/globalStorage/state.vscdb
-
-# Checkpoint status
+node dist/cli.js discover --limit 20
+node dist/cli.js sync --source codex --limit 5 --concurrency 4
+node dist/cli.js sync --concurrency 4
 node dist/cli.js status
 ```
 
 Second run on the same data should look like: `discovered=N, synced=0, skipped=N`.
+
+See the [中文使用手册](docs/使用手册.md) for full flags, FAQ, and Windows/Mac notes.
 
 ## How it writes
 
@@ -71,13 +60,8 @@ Bottleneck is usually **HTTP to Agent Memory** (one request per observation), no
 
 - Keep `AGENTMEMORY_URL` on Tailscale for daily hooks.
 - Set `AGENTMEMORY_URL_LOCAL` to LAN for this importer only.
-- Default per-request timeout is **0 = wait until done** (no abort). Optional hard cap: `--timeout-ms 180000`.
-- Failed HTTP calls retry up to 3 times (timeout/network).
-- Parallel session writers (default 8): `--concurrency 4` if NAS is overloaded.
-
-```bash
-node dist/cli.js sync --concurrency 4
-node dist/cli.js sync --timeout-ms 180000   # only if you want a hard per-request cap
-```
+- Default per-request timeout is **0 = wait until done**. Optional hard cap: `--timeout-ms 180000`.
+- Failed HTTP calls retry up to 3 times (including 502/503/504).
+- Prefer `--concurrency 2`–`4` if the NAS returns many 504s.
 
 Plain `http://` is already unencrypted; SSH is not used.
